@@ -1,0 +1,458 @@
+{
+  "_about": "Labeled retrieval evaluation set. Each entry: query, expected (exact section_title, or null for off-topic queries that must return nothing), category, and note explaining why the case is here. Section titles must match kb_chunks.section_title exactly - eval_retrieval.py validates this before scoring and refuses to run on a stale label.",
+  "queries": [
+    {
+      "query": "Who is Abaza?",
+      "expected": "Our Team — Dr. Alex Chen — Founder & CEO",
+      "category": "exact_term",
+      "note": "bare surname, almost no semantic signal - the case token-containment exists for"
+    },
+    {
+      "query": "Who is Nassar?",
+      "expected": "Our Team — Cameron Anderson — AI Engineer",
+      "category": "exact_term",
+      "note": "surname only"
+    },
+    {
+      "query": "Tell me about Jana",
+      "expected": "Our Team — Jordan Smith — Account Manager, Marketing Strategist & Content Creator",
+      "category": "exact_term",
+      "note": "first name only"
+    },
+    {
+      "query": "Who is Abdelaziz?",
+      "expected": "Our Team — Dakota Martinez — Software Team Lead",
+      "category": "exact_term",
+      "note": "single-token name"
+    },
+    {
+      "query": "Who is El Sakka?",
+      "expected": "Our Team — Quinn Taylor — Full Stack Web Developer",
+      "category": "exact_term",
+      "note": "multi-word surname"
+    },
+    {
+      "query": "Who handles HR?",
+      "expected": "Our Team — Casey Johnson — HR & Operations Manager",
+      "category": "exact_term",
+      "note": "role acronym, not a name"
+    },
+    {
+      "query": "who is your creative director",
+      "expected": "Our Team — Taylor Williams — Creative Director, Videographer & Video Editor",
+      "category": "exact_term",
+      "note": "role title appearing in two team sections - ambiguous by design"
+    },
+    {
+      "query": "What do you charge for a project?",
+      "expected": "Frequently Asked Questions — FAQ: Pricing & Cost",
+      "category": "paraphrase",
+      "note": "real phrasing; KB says 'cost', not 'charge'"
+    },
+    {
+      "query": "Can I get my money back if I cancel?",
+      "expected": "Company Policies — Refund Policy",
+      "category": "paraphrase",
+      "note": "no shared vocabulary with the heading at all"
+    },
+    {
+      "query": "How do I pay you?",
+      "expected": "Company Policies — Payment Policy",
+      "category": "paraphrase",
+      "note": "colloquial"
+    },
+    {
+      "query": "Do I have to put money down before you start?",
+      "expected": "Company Policies — Payment Policy",
+      "category": "paraphrase",
+      "note": "deposit question with zero heading overlap"
+    },
+    {
+      "query": "Can you make me a website?",
+      "expected": "Frequently Asked Questions — FAQ: Website Development",
+      "category": "paraphrase",
+      "note": "casual phrasing of a service question"
+    },
+    {
+      "query": "Do you shoot video?",
+      "expected": "Our Services — 07. Photography & Video Production",
+      "category": "paraphrase",
+      "note": "verb form not in the KB"
+    },
+    {
+      "query": "Can you run my Instagram?",
+      "expected": "Our Services — 04. Social Media Management",
+      "category": "paraphrase",
+      "note": "names a platform the heading never mentions"
+    },
+    {
+      "query": "Do you do logos?",
+      "expected": "Our Services — 10. Branding & Visual Identity",
+      "category": "paraphrase",
+      "note": "one concrete deliverable standing in for the whole service"
+    },
+    {
+      "query": "How long until my brand is ready?",
+      "expected": "Frequently Asked Questions — FAQ: Branding Project Timeline",
+      "category": "paraphrase",
+      "note": "timeline question, informal"
+    },
+    {
+      "query": "Who owns the work when it is finished?",
+      "expected": "Company Policies — Ownership Rights",
+      "category": "paraphrase",
+      "note": "rights question in plain words"
+    },
+    {
+      "query": "What happens if I do not like the first draft?",
+      "expected": "Company Policies — Revision Policy",
+      "category": "paraphrase",
+      "note": "revision question, no shared terms"
+    },
+    {
+      "query": "Are you an AI company?",
+      "expected": "Our Services — 09. AI Creative Solutions",
+      "category": "paraphrase",
+      "note": "reframes a service as an identity question"
+    },
+    {
+      "query": "What kind of businesses do you usually work with?",
+      "expected": "About Apex Creative — Industries We Serve",
+      "category": "paraphrase",
+      "note": "industries, phrased as a question about clients"
+    },
+    {
+      "query": "Why should I pick you over someone else?",
+      "expected": "About Apex Creative — Why Apex Creative?",
+      "category": "paraphrase",
+      "note": "competitive framing"
+    },
+    {
+      "query": "How did the company start?",
+      "expected": "About Apex Creative — Company Story",
+      "category": "paraphrase",
+      "note": "origin question"
+    },
+    {
+      "query": "What is your process from start to finish?",
+      "expected": "How We Work (Workflow)",
+      "category": "paraphrase",
+      "note": "workflow, phrased as process"
+    },
+    {
+      "query": "Do you help after the project is delivered?",
+      "expected": "Company Policies — Support",
+      "category": "paraphrase",
+      "note": "post-delivery support"
+    },
+    {
+      "query": "Where are you located?",
+      "expected": "About Apex Creative — Contact & Location",
+      "category": "stemming",
+      "note": "KNOWN FAILING: 'located' does not stem to 'Location'. Kept in the set on purpose - an eval that only contains passing cases measures nothing."
+    },
+    {
+      "query": "What is your price for branding?",
+      "expected": "Frequently Asked Questions — FAQ: Pricing & Cost",
+      "category": "stemming",
+      "note": "'price' vs KB 'Pricing' - derivational, not just plural"
+    },
+    {
+      "query": "How many revisions do I get?",
+      "expected": "Company Policies — Revision Policy",
+      "category": "stemming",
+      "note": "plural 'revisions' vs singular 'Revision' in the heading"
+    },
+    {
+      "query": "What are your working hours?",
+      "expected": "About Apex Creative — Contact & Location",
+      "category": "stemming",
+      "note": "the case that drove content-matching; hours live in the body, not the heading"
+    },
+    {
+      "query": "Do you build web applications?",
+      "expected": "Our Services — 01. Software & Web Development",
+      "category": "stemming",
+      "note": "plural 'applications' vs KB 'Web Applications' in body text"
+    },
+    {
+      "query": "What are your company values?",
+      "expected": "About Apex Creative — Core Values",
+      "category": "stemming",
+      "note": "'values' plural, heading is 'Core Values'"
+    },
+    {
+      "query": "Do you offer photography services?",
+      "expected": "Our Services — 07. Photography & Video Production",
+      "category": "stemming",
+      "note": "'services' as a filler plural"
+    },
+    {
+      "query": "What services do you offer and how much do they cost?",
+      "expected": "Frequently Asked Questions — FAQ: Pricing & Cost",
+      "category": "multi_intent",
+      "note": "two intents; pricing is the harder half, so it is the labeled target"
+    },
+    {
+      "query": "Do you build websites and do you work with clients abroad?",
+      "expected": "Frequently Asked Questions — FAQ: Clients Outside Egypt",
+      "category": "multi_intent",
+      "note": "second intent labeled - tests that the first does not dominate"
+    },
+    {
+      "query": "I want branding and social media management, what is the timeline?",
+      "expected": "Frequently Asked Questions — FAQ: Branding Project Timeline",
+      "category": "multi_intent",
+      "note": "two services plus a timeline question"
+    },
+    {
+      "query": "What is your refund policy and who do I talk to about it?",
+      "expected": "Company Policies — Refund Policy",
+      "category": "multi_intent",
+      "note": "policy plus a contact intent"
+    },
+    {
+      "query": "I run a restaurant and need help with marketing, what do you recommend?",
+      "expected": "Sales Guidance (for recommending services by business type) — Sales Guidance: Restaurant/Café",
+      "category": "multi_intent",
+      "note": "business type plus a recommendation request"
+    },
+    {
+      "query": "I have a gym, what would you suggest and how long does it take?",
+      "expected": "Sales Guidance (for recommending services by business type) — Sales Guidance: Gym/Fitness",
+      "category": "multi_intent",
+      "note": "business type dominates over the timeline half"
+    },
+    {
+      "query": "What's your company's stock ticker?",
+      "expected": null,
+      "category": "off_topic",
+      "note": "scored 0.468 before the keyword fix - the worst false positive found"
+    },
+    {
+      "query": "What's the weather like today?",
+      "expected": null,
+      "category": "off_topic",
+      "note": "unrelated"
+    },
+    {
+      "query": "Can you write me a poem about cats?",
+      "expected": null,
+      "category": "off_topic",
+      "note": "the 'about' stopword case"
+    },
+    {
+      "query": "Who won the world cup in 1998?",
+      "expected": null,
+      "category": "off_topic",
+      "note": "general knowledge"
+    },
+    {
+      "query": "Write me a Python script to sort a list",
+      "expected": null,
+      "category": "off_topic",
+      "note": "coding request - a real category of visitor message"
+    },
+    {
+      "query": "What do you think of Apple's new phone?",
+      "expected": null,
+      "category": "off_topic",
+      "note": "opinion on a third party"
+    },
+    {
+      "query": "Tell me a joke",
+      "expected": null,
+      "category": "off_topic",
+      "note": "very short, no content words"
+    },
+    {
+      "query": "What is the capital of France?",
+      "expected": null,
+      "category": "off_topic",
+      "note": "general knowledge"
+    },
+    {
+      "query": "what about that?",
+      "history": [
+        "Tell me about your branding service."
+      ],
+      "expected": "Our Services — 10. Branding & Visual Identity",
+      "category": "pronoun_followup",
+      "note": "pure pronoun - zero retrievable signal without the prior turn"
+    },
+    {
+      "query": "how much is it?",
+      "history": [
+        "Do you build websites?"
+      ],
+      "expected": "Frequently Asked Questions — FAQ: Website Development",
+      "category": "pronoun_followup",
+      "note": "'it' refers to the service named one turn earlier"
+    },
+    {
+      "query": "how long does that take?",
+      "history": [
+        "I'm interested in branding."
+      ],
+      "expected": "Frequently Asked Questions — FAQ: Branding Project Timeline",
+      "category": "pronoun_followup",
+      "note": "timeline follow-up, referent in history"
+    },
+    {
+      "query": "and what about them?",
+      "history": [
+        "Who is on your team?",
+        "Do you have developers?"
+      ],
+      "expected": "Our Team — Quinn Taylor — Full Stack Web Developer",
+      "category": "pronoun_followup",
+      "note": "two prior turns; the nearer one carries the referent"
+    },
+    {
+      "query": "is that included?",
+      "history": [
+        "Do you do video editing?"
+      ],
+      "expected": "Our Services — 08. Video Editing & Post-Production",
+      "category": "pronoun_followup",
+      "note": "follow-up about scope of a named service"
+    },
+    {
+      "query": "who does it?",
+      "history": [
+        "Do you offer AI solutions?"
+      ],
+      "expected": "Our Services — 09. AI Creative Solutions",
+      "category": "pronoun_followup",
+      "note": "asks who delivers a service named in the previous turn"
+    },
+    {
+      "query": "ما هي سياسة الاسترداد لديكم؟",
+      "expected": "سياسات الشركة — سياسة الاسترجاع",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "refund policy - matches the English entry"
+    },
+    {
+      "query": "هل تقومون بتطوير المواقع الإلكترونية؟",
+      "expected": "الأسئلة الشائعة — سؤال شائع: تطوير المواقع",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "website development"
+    },
+    {
+      "query": "ما هي خدماتكم؟",
+      "expected": "خدماتنا — نظرة عامة على الخدمات",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "services overview - any service section is arguably right, labelled to the first"
+    },
+    {
+      "query": "كم تكلفة المشروع؟",
+      "expected": "الأسئلة الشائعة — سؤال شائع: الأسعار والتكلفة",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "cost question"
+    },
+    {
+      "query": "ما هي مواعيد العمل لديكم؟",
+      "expected": "عن Apex Creative — التواصل والموقع",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "working hours - lives in body text, not the heading"
+    },
+    {
+      "query": "هل تعملون مع عملاء خارج مصر؟",
+      "expected": "الأسئلة الشائعة — سؤال شائع: العملاء خارج مصر",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "clients abroad"
+    },
+    {
+      "query": "من هو مؤسس الشركة؟",
+      "expected": "فريق العمل — د. أليكس تشين (Dr. Alex Chen) — المؤسس والرئيس التنفيذي",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "founder - the name itself is Latin in the KB"
+    },
+    {
+      "query": "هل تصممون الهوية البصرية؟",
+      "expected": "خدماتنا — 10. العلامة التجارية والهوية البصرية",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "branding"
+    },
+    {
+      "query": "كيف يتم الدفع؟",
+      "expected": "سياسات الشركة — سياسة الدفع",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "payment"
+    },
+    {
+      "query": "كم عدد التعديلات المسموح بها؟",
+      "expected": "سياسات الشركة — سياسة التعديلات",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "revisions"
+    },
+    {
+      "query": "هل تقومون بتصوير الفيديو؟",
+      "expected": "خدماتنا — 07. التصوير الفوتوغرافي وإنتاج الفيديو",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "video production"
+    },
+    {
+      "query": "أين يقع مقركم؟",
+      "expected": "عن Apex Creative — التواصل والموقع",
+      "category": "arabic",
+      "lang": "ar",
+      "note": "location - the Arabic twin of the failing English 'located' case"
+    },
+    {
+      "query": "3ayez a3mel website, bteklef kam?",
+      "expected": "Frequently Asked Questions — FAQ: Pricing & Cost",
+      "category": "arabizi",
+      "lang": "arabizi",
+      "note": "wants a website, asks cost - mixes a Latin brand term with Arabizi"
+    },
+    {
+      "query": "bto3melo branding wala la?",
+      "expected": "Our Services — 10. Branding & Visual Identity",
+      "category": "arabizi",
+      "lang": "arabizi",
+      "note": "'branding' is Latin in both query and KB - the keyword path can help here"
+    },
+    {
+      "query": "el mawa3id beta3etko eh?",
+      "expected": "About Apex Creative — Contact & Location",
+      "category": "arabizi",
+      "lang": "arabizi",
+      "note": "working hours, fully transliterated - nothing for keywords to match"
+    },
+    {
+      "query": "momken a3raf 3an el refund policy?",
+      "expected": "Company Policies — Refund Policy",
+      "category": "arabizi",
+      "lang": "arabizi",
+      "note": "code-switches into English for the domain term"
+    },
+    {
+      "query": "ما هي عاصمة فرنسا؟",
+      "expected": null,
+      "category": "off_topic",
+      "lang": "ar",
+      "note": "general knowledge in Arabic - the threshold must hold across scripts"
+    },
+    {
+      "query": "اكتب لي قصيدة عن القطط",
+      "expected": null,
+      "category": "off_topic",
+      "lang": "ar",
+      "note": "the Arabic twin of the poem-about-cats case"
+    }
+  ],
+  "_history_note": "Entries with a 'history' field are pronoun-only follow-ups. They are evaluated through app.rag.pipeline._build_retrieval_query, which folds recent user turns into the query before embedding - so these test the augmented-query path, not cold retrieval. A follow-up scored without its history would be meaningless.",
+  "_language_note": "The knowledge base is stored in both English and Arabic (see knowledge_base_ar.md), and retrieval answers a question from the half matching its script. So an Arabic query's expected section is the ARABIC section title, not the English one. Arabizi entries keep English expectations on purpose: Arabizi is Latin script, so it is served from the English half, and that is the behaviour being measured."
+}

@@ -1,0 +1,33 @@
+Flask==3.0.3
+flask-cors==4.0.1
+Flask-Limiter==3.9.2
+APScheduler==3.11.0
+psycopg[binary]==3.3.5
+psycopg-pool==3.3.1
+pgvector==0.4.2
+voyageai==0.5.0
+google-genai==2.16.0
+requests==2.32.3
+python-dotenv==1.0.1
+pytest==8.3.3
+rapidfuzz==3.9.6
+numpy==2.4.6
+# Optional but STRONGLY recommended in production: local embeddings
+# (app/embeddings/local.py), used as the quota fallback.
+#
+# gemini-embedding-001 is still the primary - it measured better, see
+# eval/embedding_comparison.md. This exists because the Gemini free tier
+# allows 1,000 embed requests per DAY and every chat turn spends one, so
+# without a fallback the bot answers nothing at all once that runs out.
+# It has already happened.
+#
+# Left commented because it pulls torch (~2GB) and needs ~2.5GB free RAM
+# to run bge-m3 - installing it on a host that cannot afford that would
+# be worse than the outage. Where it is not installed the app logs a
+# warning at startup and runs on Gemini alone.
+#
+# To enable:
+#   pip install sentence-transformers==6.0.1
+#   python migrate_fallback_vectors.py
+#   python scripts/build_fallback_index.py    # costs no Gemini quota
+# sentence-transformers==6.0.1

@@ -1,0 +1,184 @@
+# Deployment checklist — Generic Hosting
+
+## What changed to get here
+
+- **Rate limiting** (`app/api/app.py`): every `POST /api/chat` request
+  is limited two ways — by IP (the real defense; default `20/minute`,
+  `300/hour`) and by session (a looser secondary throttle; default
+  `15/minute`). Session-based limiting is NOT a security boundary on
+  its own — session IDs are client-generated and trivially spoofable
+  (a bad actor can mint a fresh UUID every request), which is exactly
+  why the IP limit exists as the real backstop. Tested explicitly in
+  `tests/test_rate_limiting.py::test_rotating_session_ids_still_hit_ip_limit`.
+- **Proxy-aware client IPs** (`app/api/app.py`, `TRUSTED_PROXY_COUNT`):
+  the per-IP limit above is only worth having if it counts real
+  visitors. Behind Passenger/nginx every request arrives from the
+  proxy's own address, so without `ProxyFix` the "20 per minute" cap
+  was a single site-wide bucket shared by every visitor — a handful of
+  concurrent conversations would have started returning 429s to
+  everyone. `TRUSTED_PROXY_COUNT` must match the real number of proxy
+  hops: too low hides the client IP, and any value above 0 with NO
+  proxy in front lets a caller forge `X-Forwarded-For` and bypass the
+  limit entirely. Both directions are covered in
+  `tests/test_rate_limiting.py`.
+- **Prompt-injection defense, both directions**:
+  - Inbound (`app/rag/input_guard.py`): clear override/extraction
+    attempts are refused at the API layer before any embedding or LLM
+    call is made, so an attacker can't burn API budget probing.
+  - Outbound (`app/rag/guardrails.py` rule 2): any 8+ word verbatim run
+    shared with the system prompt is replaced before it reaches the
+    visitor, regardless of how the model was talked into producing it.
+  Neither layer is sufficient alone — the inbound one can be worded
+  around, the outbound one only acts after generation.
+- **Ungrounded proper-noun guardrail** (`app/rag/guardrails.py` rule 4):
+  generalizes the existing number-grounding rule to invented client
+  names, case studies, and team members — the other category the system
+  prompt calls out as never-fabricate.
+- **WSGI entry point** (`wsgi.py`): this file used to be a byte-for-byte
+  copy of `app/api/app.py`, which defines `create_app()` and no module-
+  level `application` object — meaning the app could not have booted
+  under Passenger at all. It is now a real entry point that loads
+  `.env`, configures logging, and exports both `application` and `app`.
+- **DB connection pooling** (`app/db.py`): `get_connection()` now
+  borrows from a `DBUtils` `PooledDB` pool instead of opening a raw
+  `pymysql.connect()` every call. Every request, every background lead-
+  capture thread, and the scheduler job all call this — without
+  pooling, that's a fresh TCP+auth round-trip on each one, which risks
+  hitting a shared-hosting connection cap outright under concurrent
+  traffic instead of degrading gracefully.
+- **Non-blocking lead extraction** (`app/api/app.py`): moved off the
+  request path onto a bounded background executor
+  (`LEAD_CAPTURE_WORKERS`, default 4), so a visitor's response time no
+  longer includes a second sequential LLM call. Bounded rather than a
+  thread-per-request: each task holds a pooled DB connection for the
+  length of an extraction call, so unbounded background work could
+  drain the pool and stall the request path it was moved off.
+- **Cached KB decode** (`app/kb/retrieval.py`): scoring a query used to
+  re-read every `kb_chunks` row (title + content + a 3KB embedding blob,
+  ~195KB per request) and re-run `struct.unpack` plus norm and title
+  tokenization over all of it. Chunks are now decoded once into a
+  process-level cache with norms and title tokens precomputed, and
+  freshness is checked per request with one cheap aggregate query. In a
+  synthetic benchmark at this KB's size that's ~195KB -> ~1KB read per
+  request and ~2.3x less CPU on the scoring path. Worth knowing: this
+  is not what a visitor feels — end-to-end latency is dominated by the
+  DashScope call, not by this — it's a DB-load and memory-churn fix.
+  An ingest run changes the fingerprint, so the cache refreshes itself
+  with no restart needed.
+- **Cache-augmented generation** (`app/rag/qa_cache.py`, `qa_cache`
+  table): a repeat of an already-answered, context-free question is
+  served from cache. An exact-text hit costs zero API calls; a semantic
+  hit costs the embedding call the turn was paying anyway and skips the
+  LLM. FAQ-shaped traffic ("what do you offer", "do you work outside
+  Egypt") is where the savings land.
+  Read the module docstring before tuning it — what is deliberately NOT
+  cached is the important half: follow-up questions, anything echoing
+  visitor-supplied numbers or names, guardrail-sanitized answers, and
+  questions containing contact details. Cached answers are scoped to the
+  KB signature and model pair that produced them, so a re-ingest retires
+  them all on the next turn with no cache-clearing step.
+  `QA_CACHE_SIMILARITY_THRESHOLD` is the risk knob: too low and a
+  visitor gets a confident answer to a question they didn't ask. It
+  defaults conservatively (0.95, near-paraphrases only) and should be
+  calibrated against real traffic before being loosened;
+  `QA_CACHE_SEMANTIC_ENABLED=false` keeps exact-text matching only.
+- **Debounced lead emails** (`app/leads/service.py` +
+  `app/api/app.py`'s scheduler): the "ready lead" email now waits for
+  3 minutes of conversation quiet before sending, instead of firing on
+  whatever was filled in at the exact moment a lead crossed the ready
+  bar.
+
+## Single-process assumption — read this before choosing a hosting plan/config
+
+Three pieces of this app assume **one worker process**:
+
+1. **Rate limiting** — default storage is in-process memory
+   (`RATE_LIMIT_STORAGE_URI=memory://`). Two workers means two
+   independent counters, so the real-world limit doubles (etc. per
+   worker) without you changing a number anywhere.
+2. **The debounced-lead-email scheduler** — runs as a background thread
+   inside the Flask process. Two workers means two schedulers, means
+   duplicate emails to the sales team.
+3. **The DB connection pool** — sized per-process. Two workers means
+   2x `DB_POOL_MAX_CONNECTIONS` actual connections against your MySQL
+   plan's real limit.
+
+A standard Passenger deployment for an
+app like this typically runs as a single process, so this should be
+fine as-is. If you ever explicitly configure multiple worker processes
+(e.g. a future move to a VPS with gunicorn `--workers > 1`), all three
+of the above need real fixes first: Redis-backed rate-limit storage,
+an externally-owned single scheduler (cron hitting a dedicated
+endpoint, or `APScheduler`'s built-in distributed lock support), and a
+correspondingly smaller `DB_POOL_MAX_CONNECTIONS` per worker.
+
+## Before you deploy — checklist
+
+- [ ] **Check your MySQL plan's `max_connections` limit**
+  and set `DB_POOL_MAX_CONNECTIONS` in `.env` with real
+  headroom under it — leave room for phpMyAdmin or anything else
+  sharing that database.
+- [ ] Run `migrate_qa_cache.py` against the **production** database to
+  create the `qa_cache` table. Without it every turn logs a cache write
+  failure and falls back to a normal (uncached) answer — the bot still
+  works, it just saves nothing.
+- [ ] Run `migrate_leads_columns.py` (or confirm `schema.sql` is fully
+  applied) against the **production** database — the `notified_at`/
+  `updated_at` columns must exist before lead capture will work at all.
+- [ ] Set every env var in `.env.example` in your hosting environment
+  variables screen (or upload a real `.env` alongside
+  `wsgi.py` — confirm which one your setup actually reads;
+  Passenger apps typically pick up a `.env` in the app root via
+  `python-dotenv`, which `wsgi.py` already calls).
+- [ ] Set `FRONTEND_ORIGIN` to the real site domain(s), not `*`.
+- [ ] Set `TRUSTED_PROXY_COUNT` to the real number of proxy hops (`1`
+  for a standard Passenger/nginx setup, `0` if nothing proxies the
+  app). Verify it after deploying: hit the API from two different
+  networks and confirm the Passenger log shows two different client
+  IPs, not the proxy's address twice.
+- [ ] **Re-run KB ingestion** if `knowledge_base.md` changed
+  since the last deploy — editing the markdown does nothing on its own.
+  Until `python scripts/ingest_kb.py knowledge_base.md` runs
+  against the production database, `kb_chunks` still serves the old
+  text, including any section that was deliberately removed.
+- [ ] Set `SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM_EMAIL` to a real
+  mailbox — without these, lead/escalation emails silently log a
+  warning and never send (chat itself still works fine).
+- [ ] In your hosting Python App screen, confirm the "Application entry
+  point" / "Application startup file" fields point at `wsgi.py` /
+  `application`. `wsgi.py` now genuinely exports both `app` and
+  `application`, so either name works — verified with
+  `python -c "import wsgi; print(wsgi.application)"` from the app root
+  with the venv active. (It previously exported neither, so if a past
+  deploy of this app never started, that was why.)
+- [ ] `pip install -r requirements.txt` inside the Passenger-managed
+  virtualenv (via hosting's "Run Pip Install" or SSH into the venv it
+  creates) — new dependencies since the last deploy: `flask-cors`,
+  `APScheduler`, `Flask-Limiter`, `DBUtils`.
+- [ ] After first deploy, hit `GET /api/health` from a browser to confirm the app is actually up
+  before wiring the frontend at it.
+- [ ] Watch the Passenger log file (set in hosting's Python App screen)
+  for the first few real conversations — `logging.basicConfig` in
+  `wsgi.py` now ensures INFO-level logs (including the scheduler job
+  running) are visible there, not just warnings/errors.
+
+## What's still NOT handled, flagged rather than silently skipped
+
+- **Multiple worker processes** — see above; not needed unless traffic
+  actually requires it, but don't turn this on without the follow-up
+  fixes.
+- **True horizontal scaling / high traffic** — this stack's real
+  ceiling is the DashScope LLM call latency and quota, not this app's
+  own code. No amount of backend tuning here changes that; if traffic
+  ever gets large enough to matter, that's a provider/quota
+  conversation, not a rate-limiting one.
+- **Semantic (non-verbatim) prompt leaks** — the outbound exfiltration
+  rule is a verbatim-run detector. A model that genuinely paraphrases
+  its instructions in fresh wording slips past it. Catching that would
+  need a second LLM call per turn, which isn't worth the latency and
+  cost for the residual risk. Documented, with a test that pins the
+  boundary (`test_pipeline_catches_indirect_system_prompt_leak_via_summary_framing`).
+- **Corrections to already-filled lead fields** — the update-notification
+  path only fires on blank -> filled transitions, so a visitor changing
+  a budget they already gave doesn't re-notify the team. Pre-existing,
+  unchanged here.
